@@ -28,7 +28,7 @@ COLORS = {"DynamicArray": "#2563eb", "LinkedList": "#d97706", "MinHeap": "#15803
 
 def complexity(workload, structure):
     if workload == "heap_insert":
-        return "O(n log n); observed comparisons near linear"
+        return "Theta(n) expected random distinct order; O(n log n) worst"
     if workload == "heap_extract":
         return "O(n log n)"
     if workload == "random_access":
@@ -131,6 +131,16 @@ for workload in ORDER:
             lines.append(f"| {row['structure']} | {row['n']:,} | {row['m']:,} | {row['mean_ms']:.6f} | {row['stdev_ms']:.6f} | {row['accesses']:,} | {row['movements']:,} | {row['comparisons']:,} | {row['batches']} | {row['theory']} |")
     lines.append("")
 (RESULTS / "tables" / "results.md").write_text("\n".join(lines), encoding="utf-8")
+readme_path = ROOT / "README.md"
+if readme_path.exists():
+    readme = readme_path.read_text(encoding="utf-8")
+    start_marker = "<!-- RESULTS_START -->"
+    end_marker = "<!-- RESULTS_END -->"
+    if start_marker in readme and end_marker in readme:
+        prefix, remainder = readme.split(start_marker, 1)
+        _, suffix = remainder.split(end_marker, 1)
+        tables = "\n".join(line.replace("## ", "### ", 1) if line.startswith("## ") else line for line in lines[2:])
+        readme_path.write_text(prefix + start_marker + "\n\n" + tables + "\n" + end_marker + suffix, encoding="utf-8")
 
 plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False})
 (RESULTS / "plots").mkdir(exist_ok=True)
@@ -151,6 +161,8 @@ for metric in ["time", "operations"]:
                 axis.plot(x, y, "o-", label=f"{structure}: {field}", color=COLORS[structure])
         axis.set_xscale("log")
         axis.set_yscale("log" if metric == "time" else "symlog", **({"linthresh": 1} if metric == "operations" else {}))
+        if metric == "operations":
+            axis.set_ylim(bottom=0)
         axis.set_title(TITLES[workload])
         axis.set_xlabel("Initial size n")
         axis.set_ylabel("Total time (ms)" if metric == "time" else "Count per workload run")
